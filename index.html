@@ -1117,14 +1117,71 @@ nav {
   }
   setInterval(updateTimer, 1000);
 
-  // AGENT DATA (통계 더미)
-  const agentStats = [
-    { name: '레이즈',  uuid: 'f94c3b30-42be-11eb-aa35-3db9dc99e26b', wr: '64%', kda: 'KDA 2.1 · 32게임', bar: 64 },
-    { name: '제트',    uuid: 'add6443a-41bd-45f7-b7a3-6aae55f4cd46', wr: '59%', kda: 'KDA 1.9 · 27게임', bar: 59 },
-    { name: '피닉스',  uuid: 'eb93336a-449b-9c1e-0ac7-d56ae0b3f4b4', wr: '55%', kda: 'KDA 1.6 · 20게임', bar: 55 },
-    { name: '세이지',  uuid: '569fdd95-4d10-43ab-ca70-79becc718b46', wr: '52%', kda: 'KDA 1.4 · 19게임', bar: 52 },
-    { name: '레이스',  uuid: '1dbf2edd-4729-0984-3115-daa5eed44993', wr: '48%', kda: 'KDA 1.2 · 25게임', bar: 48 },
-  ];
+  // AGENT DATA — valorant-api.com 에서 실시간으로 가져오기
+  const agentWinData = {
+    'Raze':   { name: '레이즈', wr: '64%', kda: 'KDA 2.1 · 32게임', bar: 64 },
+    'Jett':   { name: '제트',   wr: '59%', kda: 'KDA 1.9 · 27게임', bar: 59 },
+    'Phoenix':{ name: '피닉스', wr: '55%', kda: 'KDA 1.6 · 20게임', bar: 55 },
+    'Sage':   { name: '세이지', wr: '52%', kda: 'KDA 1.4 · 19게임', bar: 52 },
+    'Reyna':  { name: '레이나', wr: '48%', kda: 'KDA 1.2 · 25게임', bar: 48 },
+  };
+
+  const agentDisplayNames = Object.keys(agentWinData);
+
+  async function loadAgents() {
+    const grid = document.getElementById('agt-grid');
+    if (!grid) return;
+
+    try {
+      const res  = await fetch('https://valorant-api.com/v1/agents?isPlayableCharacter=true&language=ko-KR');
+      const data = await res.json();
+      const all  = data.data;
+
+      // 원하는 에이전트만 순서대로 필터
+      const filtered = agentDisplayNames
+        .map(en => all.find(a => a.displayName === en || a.developerName === en))
+        .filter(Boolean);
+
+      grid.innerHTML = filtered.map((a, i) => {
+        const stat = agentWinData[a.displayName] || agentWinData[a.developerName] || {};
+        return `
+          <div class="agt-card fade" style="animation-delay:${i * 0.05}s">
+            <div class="agt-num">#${i + 1}</div>
+            <div class="agt-img-wrap">
+              <img
+                src="${a.fullPortrait || a.displayIcon}"
+                alt="${a.displayName}"
+                onerror="this.parentElement.innerHTML='<div class=\\'agt-img-placeholder\\'>${a.displayName}</div>'"
+              >
+            </div>
+            <div class="agt-body">
+              <div class="agt-name">${a.displayName}</div>
+              <div class="agt-wr">${stat.wr || '-'}</div>
+              <div class="agt-kda">${stat.kda || ''}</div>
+              <div class="agt-bar"><div class="agt-fill" style="width:${stat.bar || 50}%"></div></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch (e) {
+      // 실패시 기본 표시
+      grid.innerHTML = agentDisplayNames.map((name, i) => {
+        const stat = agentWinData[name];
+        return `
+          <div class="agt-card fade">
+            <div class="agt-num">#${i + 1}</div>
+            <div class="agt-img-wrap"><div class="agt-img-placeholder">${stat.name}</div></div>
+            <div class="agt-body">
+              <div class="agt-name">${stat.name}</div>
+              <div class="agt-wr">${stat.wr}</div>
+              <div class="agt-kda">${stat.kda}</div>
+              <div class="agt-bar"><div class="agt-fill" style="width:${stat.bar}%"></div></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
 
   // 매치 행 에이전트 이미지 매핑
   const matchAgentMap = {
@@ -1135,29 +1192,7 @@ nav {
     'SGE': '569fdd95-4d10-43ab-ca70-79becc718b46',
   };
 
-  // 에이전트 카드 렌더
-  async function loadAgents() {
-    const grid = document.getElementById('agt-grid');
-    if (!grid) return;
-    grid.innerHTML = agentStats.map((a, i) => `
-      <div class="agt-card fade" style="animation-delay:${i * 0.05}s">
-        <div class="agt-num">#${i + 1}</div>
-        <div class="agt-img-wrap">
-          <img
-            src="https://media.valorant-api.com/agents/${a.uuid}/fullportrait.png"
-            alt="${a.name}"
-            onerror="this.parentElement.innerHTML='<div class=\\'agt-img-placeholder\\'>${a.name}</div>'"
-          >
-        </div>
-        <div class="agt-body">
-          <div class="agt-name">${a.name}</div>
-          <div class="agt-wr">${a.wr}</div>
-          <div class="agt-kda">${a.kda}</div>
-          <div class="agt-bar"><div class="agt-fill" style="width:${a.bar}%"></div></div>
-        </div>
-      </div>
-    `).join('');
-  }
+  // 에이전트 카드 렌더 — 위 loadAgents() 함수로 대체됨
 
   // 매치 행 에이전트 이미지 교체
   function loadMatchAgentImages() {
